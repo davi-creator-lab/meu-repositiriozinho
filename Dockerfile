@@ -1,23 +1,11 @@
-# Use a imagem base da NVIDIA com CUDA (runtime)
-FROM nvidia/cuda:12.6.0-runtime-ubuntu20.04
+FROM nvidia/cuda:12.6-runtime-ubuntu20.04
 
-# Evita interações durante instalações de pacotes
-ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt install -y python3.11 python3.11-venv curl wget git
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN echo 'export PATH="/root/.cargo/bin:$PATH"' >> ~/.bashrc
 
-# Atualiza pacotes e instala dependências do sistema + Python padrão do Ubuntu 20.04
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-venv python3-distutils \
-    wget git curl build-essential \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+RUN git clone https://github.com/nari-labs/dia.git .
+RUN uv venv --python python3.11
 
-# Atualiza o pip
-RUN python3 -m pip install --upgrade pip setuptools wheel
-
-# Define o diretório de trabalho
-WORKDIR /workspace
-
-# Copie os arquivos do seu projeto (opcional)
-# COPY . /workspace
-
-# Comando padrão ao iniciar o container
-CMD ["bash"]
+CMD ["uv", "run", "python", "-c", "import subprocess; import sys; subprocess.run([sys.executable, 'app.py', '--server-name', '0.0.0.0', '--server-port', '7860'])"]
