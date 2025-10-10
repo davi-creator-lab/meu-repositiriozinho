@@ -1,11 +1,52 @@
-FROM nvidia/cuda:12.6-runtime-ubuntu20.04
+# Usa a imagem base da NVIDIA com Ubuntu 20.04 e suporte CUDA 12.6
+FROM nvidia/cuda:12.6.0-base-ubuntu20.04
 
-RUN apt update && apt install -y python3.11 python3.11-venv curl wget git
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN echo 'export PATH="/root/.cargo/bin:$PATH"' >> ~/.bashrc
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/cuda-12.6/bin:/root/.local/bin:$PATH"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH"
 
+# Atualiza e instala dependências essenciais
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        software-properties-common \
+        curl wget git ca-certificates && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.11 python3.11-distutils python3.11-venv && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2 && \
+    python3 -m ensurepip && python3 -m pip install --upgrade pip && \
+    rm -rf /var/lib/apt/lists/*
+
+# Instala CUDA Toolkit (já vem parcialmente na base, mas garantimos o toolkit)
+RUN wget https://developer.download.nvidia.com/compute/cuda/12.6.0/local_installers/cuda_12.6.0_560.28.03_linux.run && \
+    sh cuda_12.6.0_560.28.03_linux.run --toolkit --silent --override && \
+    rm cuda_12.6.0_560.28.03_linux.run
+
+# Instala cuDNN
+RUN wget https://developer.download.nvidia.com/compute/cudnn/9.0.0/local_installers/cudnn-local-repo-ubuntu2004-9.0.0_1.0-1_amd64.deb && \
+    dpkg -i cudnn-local-repo-ubuntu2004-9.0.0_1.0-1_amd64.deb && \
+    cp /var/cudnn-local-repo-ubuntu2004-9.0.0/cudnn-*-keyring.gpg /usr/share/keyrings/ && \
+    apt-get update && apt-get install -y cudnn9-cuda-12 && \
+    rm cudnn-local-repo-ubuntu2004-9.0.0_1.0-1_amd64.deb
+
+# Instala cuSparseLt
+RUN wget https://developer.download.nvidia.com/compute/cusparselt/0.7.1/local_installers/cusparselt-local-repo-ubuntu2004-0.7.1_1.0-1_amd64.deb && \
+    dpkg -i cusparselt-local-repo-ubuntu2004-0.7.1_1.0-1_amd64.deb && \
+    cp /var/cusparselt-local-repo-ubuntu2004-0.7.1/cusparselt-*-keyring.gpg /usr/share/keyrings/ && \
+    apt-get update && apt-get install -y libcusparselt0 libcusparselt-dev && \
+    rm cusparselt-local-repo-ubuntu2004-0.7.1_1.0-1_amd64.deb && \
+    ldconfig
+
+# Instala o gerenciador de pacotes uv
+RUN pip install uv
+
+# Clona e configura o projeto DIA
+RUN git clone https://github.com/nari-labs/dia.git /app
 WORKDIR /app
-RUN git clone https://github.com/nari-labs/dia.git .
+
 RUN uv venv --python python3.11
 
-CMD ["uv", "run", "python", "-c", "import subprocess; import sys; subprocess.run([sys.executable, 'app.py', '--server-name', '0.0.0.0', '--server-port', '7860'])"]
+EXPOSE 7860
+
+# Comando padrão ao iniciar o container
+CMD ["uv", "run", "python", "app.py", "--server-name", "0.0.0.0", "--server-port", "7860"]
