@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6-runtime-ubuntu20.04
+FROM nvidia/cuda:12.6.0-runtime-ubuntu20.04
 
 # Instala dependências do sistema
 RUN apt-get update && \
