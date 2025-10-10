@@ -1,5 +1,5 @@
 # Base CUDA runtime
-FROM nvidia/cuda:12.6.0-runtime-ubuntu20.04
+FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04
 
 # Evita prompts durante instalação
 ENV DEBIAN_FRONTEND=noninteractive
