@@ -15,8 +15,10 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Adicionar PPA para Python 3.11 e instalar
-RUN add-apt-repository -y ppa:deadsnakes/ppa \
+# Instalar Python 3.11 sem interação
+RUN apt-get update && apt-get install -y software-properties-common \
+    && add-apt-repository universe \
+    && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
     && apt-get install -y python3.11 python3.11-distutils python3.11-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
@@ -24,6 +26,7 @@ RUN add-apt-repository -y ppa:deadsnakes/ppa \
     && python3 --version \
     && python3 -m ensurepip --upgrade \
     && python3 -m pip install --upgrade pip
+
 
 # Informações do sistema
 RUN lsb_release -a && uname -m
