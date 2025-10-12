@@ -5,7 +5,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
 # Informações do sistema
-RUN nvidia-smi && lsb_release -a && uname -m
+# RUN nvidia-smi && lsb_release -a && uname -m
+RUN lsb_release -a && uname -m
 
 # Dependências básicas
 RUN apt update && apt install -y \
