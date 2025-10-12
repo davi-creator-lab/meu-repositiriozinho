@@ -17,9 +17,8 @@ RUN apt-get update && apt-get install -y \
     python3.11 python3.11-venv python3.11-distutils python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Configurar Python 3.11 como padrão
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2 \
-    && update-alternatives --config python3 <<< '2'
+# Configurar Python 3.11 como padrão
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2
 
 # 3. Atualizar pip
 RUN python3 -m ensurepip --upgrade \
