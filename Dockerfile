@@ -44,12 +44,11 @@ RUN python --version && \
 # 6. Diretório da aplicação
 WORKDIR /app
 
-# 7. Copiar e instalar requisitos (se existir)
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# 8. Copiar código da aplicação
+# 7. Copiar código da aplicação
 COPY . .
+
+# 8. Atualizar pip
+RUN pip install --upgrade pip
 
 # 9. Porta e comando padrão
 EXPOSE 7860
