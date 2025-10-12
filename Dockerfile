@@ -1,46 +1,34 @@
-# Use a imagem base Ubuntu 20.04
-FROM ubuntu:20.04
+# Base com CUDA 12.6
+FROM nvidia/cuda:12.6.0-runtime-ubuntu20.04
 
-# Evita prompts interativos
+# Evitar interações durante a instalação
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
-# Atualiza e instala dependências básicas
+# Atualizar pacotes e instalar dependências
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    curl \
-    wget \
-    git \
-    build-essential \
-    ca-certificates \
-    lsb-release \
-    gnupg \
-    apt-transport-https \
-    sudo \
+    python3.8 python3.11 python3.11-venv python3.11-distutils \
+    python3-pip curl wget git unzip sudo build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Adiciona o PPA do Deadsnakes para Python 3.11
-RUN add-apt-repository ppa:deadsnakes/ppa
-
-# Atualiza novamente e instala Python 3.11
-RUN apt-get update && apt-get install -y \
-    python3.11 \
-    python3.11-distutils \
-    python3.11-venv \
-    && rm -rf /var/lib/apt/lists/*
-
-# Configura alternativas do python3
+# Configurar alternativas para o Python
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2 \
-    && update-alternatives --set python3 /usr/bin/python3.8
+    && update-alternatives --set python3 /usr/bin/python3.11
 
-# Instala pip para Python 3.11
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+# Atualizar pip para o Python 3.11
+RUN python3 -m ensurepip \
+    && python3 -m pip install --upgrade pip setuptools wheel
 
-# Define diretório de trabalho
+# Diretório de trabalho
 WORKDIR /app
 
-# Copia arquivos do projeto (opcional)
+# Copiar requisitos (caso tenha)
+# COPY requirements.txt .
+# RUN pip install -r requirements.txt
+
+# Copiar aplicação
 # COPY . .
 
-# Comando padrão ao iniciar o container
-CMD ["python3", "--version"]
+# Comando padrão (pode ser alterado)
+CMD ["python3"]
