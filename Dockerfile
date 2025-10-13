@@ -42,8 +42,9 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python
 RUN python3 -m ensurepip --upgrade \
     && python3 -m pip install --upgrade pip setuptools wheel
 
-# Instalar cuDNN 9 para CUDA 12.6 (repositório oficial NVIDIA)
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb \
+# Instalar cuDNN 9 para CUDA 12.6 (corrigido para evitar conflito Signed-By)
+RUN rm -f /etc/apt/sources.list.d/cuda*.list \
+    && wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb \
     && dpkg -i cuda-keyring_1.1-1_all.deb \
     && apt-get update \
     && apt-get install -y libcudnn9 libcudnn9-dev \
