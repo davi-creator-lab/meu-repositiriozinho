@@ -1,10 +1,14 @@
-# Base com CUDA 12.6
+# ===============================
+# 🔹 BASE CUDA 12.6 + Ubuntu 20.04
+# ===============================
 FROM nvidia/cuda:12.6.0-runtime-ubuntu20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
-# Atualização e dependências básicas
+# ===============================
+# 🔹 DEPENDÊNCIAS BÁSICAS
+# ===============================
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
@@ -25,7 +29,9 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Baixar e compilar Python 3.11
+# ===============================
+# 🔹 COMPILAÇÃO DO PYTHON 3.11
+# ===============================
 RUN cd /tmp \
     && wget https://www.python.org/ftp/python/3.11.8/Python-3.11.8.tgz \
     && tar -xf Python-3.11.8.tgz \
@@ -35,14 +41,16 @@ RUN cd /tmp \
     && make altinstall \
     && cd / && rm -rf /tmp/Python-3.11.8 /tmp/Python-3.11.8.tgz
 
-# Configurar python3 como padrão
+# Define o Python 3.11 como padrão
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.11 1
 
-# Atualizar pip e instalar venv/distutils
+# Atualiza pip e ferramentas
 RUN python3 -m ensurepip --upgrade \
     && python3 -m pip install --upgrade pip setuptools wheel
 
-# Instalar cuDNN 9 para CUDA 12.6 (nome correto para repositório atual)
+# ===============================
+# 🔹 INSTALA CUDA DNN + cuSPARSELt
+# ===============================
 RUN rm -f /etc/apt/sources.list.d/cuda*.list \
     && wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb \
     && dpkg -i cuda-keyring_1.1-1_all.deb \
@@ -50,7 +58,6 @@ RUN rm -f /etc/apt/sources.list.d/cuda*.list \
     && apt-get install -y libcudnn9-cuda-12 libcudnn9-dev-cuda-12 \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar cuSPARSELt
 RUN wget https://developer.download.nvidia.com/compute/cusparselt/0.7.1/local_installers/cusparselt-local-repo-ubuntu2004-0.7.1_1.0-1_amd64.deb \
     && dpkg -i cusparselt-local-repo-ubuntu2004-0.7.1_1.0-1_amd64.deb \
     && cp /var/cusparselt-local-repo-ubuntu2004-0.7.1/cusparselt-*-keyring.gpg /usr/share/keyrings/ \
@@ -59,15 +66,25 @@ RUN wget https://developer.download.nvidia.com/compute/cusparselt/0.7.1/local_in
     && rm -rf /var/lib/apt/lists/* \
     && ldconfig
 
-# Instalar uv (se for o mesmo que você usava)
+# ===============================
+# 🔹 INSTALA FERRAMENTAS ÚTEIS
+# ===============================
 RUN pip install uv
 
-# Clonar o repositório e criar venv
+# ===============================
+# 🔹 CLONA O SEU PROJETO
+# ===============================
 RUN git clone https://github.com/nari-labs/dia.git /root/dia
 WORKDIR /root/dia
+
+# Cria e prepara o ambiente virtual
 RUN python3 -m venv venv \
     && . venv/bin/activate \
-    && pip install --upgrade pip setuptools wheel
+    && pip install --upgrade pip setuptools wheel \
+    && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-# Comando padrão ao iniciar o container
-CMD ["/bin/bash"]
+# ===============================
+# 🔹 MANTÉM O CONTAINER ATIVO
+# ===============================
+# Evita que o container seja encerrado no NodeShift
+CMD ["tail", "-f", "/dev/null"]
