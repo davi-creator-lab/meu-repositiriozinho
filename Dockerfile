@@ -84,7 +84,9 @@ RUN python3 -m venv venv \
     && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
 # ===============================
-# 🔹 MANTÉM O CONTAINER ATIVO
+# 🔹 “ENGANA” o NodeShift com uma porta ativa
 # ===============================
-# Evita que o container seja encerrado no NodeShift
-CMD ["tail", "-f", "/dev/null"]
+EXPOSE 7860
+
+# Mantém o container ativo e simula um serviço
+CMD ["bash", "-c", "python3 -m http.server 7860 & tail -f /dev/null"]
