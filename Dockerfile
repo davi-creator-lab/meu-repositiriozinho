@@ -27,26 +27,42 @@ RUN wget https://developer.download.nvidia.com/compute/cusparselt/0.7.1/local_in
     && dpkg -i cusparselt-local-repo-ubuntu2204-0.7.1_1.0-1_amd64.deb \
     && cp /var/cusparselt-local-repo-ubuntu2204-0.7.1/cusparselt-*-keyring.gpg /usr/share/keyrings/ \
     && apt-get update \
-    && apt-get install -y libcusparselt0 libcusparselt-dev
+    && apt-get install -y libcusparselt0 libcusparselt-dev \
+    && rm cusparselt-local-repo-ubuntu2204-0.7.1_1.0-1_amd64.deb \
+    && rm -rf /var/lib/apt/lists/*
 
 # Baixa e instala CUDA keyring e cuDNN
 RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb \
     && dpkg -i cuda-keyring_1.1-1_all.deb \
     && apt-get update \
-    && apt-get install -y libcudnn9-cuda-12 libcudnn9-dev-cuda-12
+    && apt-get install -y libcudnn9-cuda-12 libcudnn9-dev-cuda-12 \
+    && rm cuda-keyring_1.1-1_all.deb \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instala uv e cria ambiente virtual
-RUN pip install uv
+# Limpa cache para liberar espaço antes do próximo passo
+RUN apt-get clean && rm -rf /var/cache/apt/* /tmp/* /var/tmp/*
+
+# Instala uv e hf_xet para download otimizado
+RUN pip install --no-cache-dir uv huggingface_hub[hf_xet]
 
 WORKDIR /app/dia
 
 # Cria o ambiente virtual e instala dependências
 RUN uv venv --python python3.10 \
     && . .venv/bin/activate \
-    && uv pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt found"
+    && uv pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt found" \
+    && uv pip install hf_xet
 
-# Executa app.py pela primeira vez para fazer a instalação inicial
-RUN uv run app.py || echo "Primeira execução completa (setup inicial)"
+# Configura cache do Hugging Face para o diretório do projeto
+ENV HF_HOME=/app/dia/.cache/huggingface
+ENV HF_HUB_CACHE=/app/dia/.cache/huggingface/hub
+
+# Cria o diretório de cache
+RUN mkdir -p $HF_HOME
+
+# Executa app.py pela primeira vez para fazer download dos modelos
+# O timeout evita que fique rodando indefinidamente
+RUN timeout 300 uv run app.py || echo "Setup inicial completo (modelos baixados)"
 
 # ============================================
 # Stage 2: Runtime - Imagem final otimizada
@@ -78,7 +94,7 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86
 # Atualiza ldconfig
 RUN ldconfig
 
-# Copia o código da aplicação e ambiente virtual do builder
+# Copia o código da aplicação, ambiente virtual E os modelos baixados
 COPY --from=builder /app/dia /app/dia
 
 WORKDIR /app/dia
@@ -86,9 +102,11 @@ WORKDIR /app/dia
 # Instala uv no runtime
 RUN pip install --no-cache-dir uv
 
-# Variáveis de ambiente para otimização
+# Variáveis de ambiente
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV HF_HOME=/app/dia/.cache/huggingface
+ENV HF_HUB_CACHE=/app/dia/.cache/huggingface/hub
 
 # Comando padrão para executar a aplicação
 CMD ["uv", "run", "app.py"]
