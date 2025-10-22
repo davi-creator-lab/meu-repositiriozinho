@@ -47,11 +47,21 @@ RUN pip install --no-cache-dir uv huggingface_hub[hf_xet]
 
 WORKDIR /app/dia
 
+# Lista arquivos para debug (opcional, pode remover depois)
+RUN ls -la
+
 # Cria o ambiente virtual e instala dependências
-RUN uv venv --python python3.10 \
-    && . .venv/bin/activate \
-    && uv pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt found" \
-    && uv pip install hf_xet
+RUN uv venv --python python3.10
+
+# Instala dependências do requirements.txt se existir
+RUN if [ -f requirements.txt ]; then \
+        uv pip install -r requirements.txt; \
+    else \
+        echo "No requirements.txt found, skipping"; \
+    fi
+
+# Instala hf_xet para download otimizado
+RUN uv pip install hf_xet
 
 # Configura cache do Hugging Face para o diretório do projeto
 ENV HF_HOME=/app/dia/.cache/huggingface
@@ -60,9 +70,13 @@ ENV HF_HUB_CACHE=/app/dia/.cache/huggingface/hub
 # Cria o diretório de cache
 RUN mkdir -p $HF_HOME
 
-# Executa app.py pela primeira vez para fazer download dos modelos
-# O timeout evita que fique rodando indefinidamente
-RUN timeout 300 uv run app.py || echo "Setup inicial completo (modelos baixados)"
+# Nota: O modelo será baixado no primeiro run do container
+# Isso reduz o tamanho da imagem de ~15GB para ~8GB
+
+# Limpeza final para reduzir tamanho da imagem
+RUN rm -rf /root/.cache/pip /tmp/* /var/tmp/* ~/.cache/* \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # ============================================
 # Stage 2: Runtime - Imagem final otimizada
@@ -107,6 +121,9 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV HF_HOME=/app/dia/.cache/huggingface
 ENV HF_HUB_CACHE=/app/dia/.cache/huggingface/hub
+
+# Volume para persistir modelos baixados
+VOLUME ["/app/dia/.cache"]
 
 # Comando padrão para executar a aplicação
 CMD ["uv", "run", "app.py"]
