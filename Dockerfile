@@ -51,8 +51,5 @@ RUN ldconfig
 # Cria o ambiente virtual com Python 3.10
 RUN uv venv --python python3.10
 
-# Executa app.py pela primeira vez para fazer a instalação/setup
-RUN uv run app.py || true
-
 # Comando padrão para executar a aplicação
 CMD ["uv", "run", "app.py"]
